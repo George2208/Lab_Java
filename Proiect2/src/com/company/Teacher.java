@@ -19,13 +19,20 @@ public class Teacher extends Person {
     public Set<Integer> getCourses () { return courses; }
 
     @Override public List<String> getData() { return List.of(String.valueOf(this.id), this.fName, this.lName); }
-    @Override Collection<Pair<Class<? extends TableRow>, Collection<Integer>>> isDependency() {
+    @Override public Collection<Pair<Class<? extends TableRow>, Collection<Integer>>> isDependency() {
         return new HashSet<>(){{
             add(new Pair<>(Course.class, courses));
         }};
     }
-    @Override Collection<Pair<Class<? extends TableRow>, Integer>> hasDependency() {
-        return new HashSet<>();
+    @Override public void removeDependency(Class<? extends TableRow> cls, Integer id){
+        if (cls == Course.class) {
+            courses.remove(id);
+        }
+    }
+    @Override public void addDependency(Class<? extends TableRow> cls, Integer id){
+        if (cls == Course.class) {
+            courses.add(id);
+        }
     }
     @Override public String toString() {
         return "Teacher{" +

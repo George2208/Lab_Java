@@ -24,10 +24,7 @@ public class Grade extends TableRow{
     public int getAttendantID() { return attendantID; }
 
     @Override public List<String> getData() { return List.of(String.valueOf(this.id), String.valueOf(this.attendantID), String.valueOf(this.grade)); }
-    @Override Collection<Pair<Class<? extends TableRow>, Collection<Integer>>> isDependency() {
-        return new HashSet<>();
-    }
-    @Override Collection<Pair<Class<? extends TableRow>, Integer>> hasDependency() {
+    @Override public Collection<Pair<Class<? extends TableRow>, Integer>> hasDependency() {
         return new HashSet<>(){{
             add(new Pair<>(Attendant.class, attendantID));
         }};

@@ -27,16 +27,26 @@ public class Course extends TableRow {
     public void addAttendance (int attendantID) { attendances.add(attendantID); }
 
     @Override public List<String> getData() { return List.of(String.valueOf(this.id), String.valueOf(this.teacherID), String.valueOf(this.subjectID)); }
-    @Override Collection<Pair<Class<? extends TableRow>, Collection<Integer>>> isDependency() {
+    @Override public Collection<Pair<Class<? extends TableRow>, Collection<Integer>>> isDependency() {
         return new HashSet<>(){{
             add(new Pair<>(Attendant.class, attendances));
         }};
     }
-    @Override Collection<Pair<Class<? extends TableRow>, Integer>> hasDependency() {
+    @Override public Collection<Pair<Class<? extends TableRow>, Integer>> hasDependency() {
         return new HashSet<>(){{
             add(new Pair<>(Teacher.class, teacherID));
             add(new Pair<>(Subject.class, subjectID));
         }};
+    }
+    @Override public void removeDependency(Class<? extends TableRow> cls, Integer id){
+        if (cls == Attendant.class) {
+            attendances.remove(id);
+        }
+    }
+    @Override public void addDependency(Class<? extends TableRow> cls, Integer id){
+        if (cls == Attendant.class) {
+            attendances.add(id);
+        }
     }
     @Override public String toString() {
         return "Course{" +

@@ -9,6 +9,8 @@ public abstract class TableRow {
     protected TableRow(int id) { this.id = id; }
     public int id() { return id; }
     abstract List<String> getData();
-    abstract Collection<Pair<Class<? extends TableRow>, Collection<Integer>>> isDependency(); //{ return new HashSet<>(); }
-    abstract Collection<Pair<Class<? extends TableRow>, Integer>> hasDependency(); //{ return new HashSet<>(); }
+    public Collection<Pair<Class<? extends TableRow>, Collection<Integer>>> isDependency() { return new HashSet<>(); }
+    public Collection<Pair<Class<? extends TableRow>, Integer>> hasDependency() { return new HashSet<>(); }
+    public void removeDependency(Class<? extends TableRow> cls, Integer id) {}
+    public void addDependency(Class<? extends TableRow> cls, Integer id) {}
 }

@@ -38,6 +38,16 @@ public class Attendant extends TableRow {
             add(new Pair<>(Course.class, courseID));
         }};
     }
+    @Override public void removeDependency(Class<? extends TableRow> cls, Integer id){
+        if (cls == Grade.class) {
+            grades.remove(id);
+        }
+    }
+    @Override public void addDependency(Class<? extends TableRow> cls, Integer id){
+        if (cls == Grade.class) {
+            grades.add(id);
+        }
+    }
     @Override public String toString() {
         return "Attendant{" +
                 "id=" + id +
