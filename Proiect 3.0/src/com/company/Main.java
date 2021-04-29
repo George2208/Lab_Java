@@ -63,5 +63,7 @@ public class Main {
         populate(db);
         demoAddTable(db);
         demoQuery(db);
+        db.save();
+        db.save("database");
     }
 }
