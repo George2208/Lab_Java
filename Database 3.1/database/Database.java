@@ -22,6 +22,12 @@ public class Database {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    /**
+     * Return a copy of an object from the database.
+     * @param obj the object derived from Row
+     * @return the copy of the object (including id)
+     */
     private Row _copy(Row obj) {
         try {
             return (Row) tables.get(obj.getClass()).constructor.newInstance(new ArrayList<>(){{
@@ -34,6 +40,13 @@ public class Database {
             return null;
         }
     }
+
+    /**
+     * Create a new table in the MySQL database.
+     * @param tableName the name of the table
+     * @param columns what columns will the new table have (ordered alphabetically)
+     * @param foreignKeys a map with columns and respective referenced table
+     */
     @Audited private void _SQL_Create(String tableName, SortedSet<String> columns, Map<String, String> foreignKeys) {
         try {
             StringBuilder sb = new StringBuilder("create table "+tableName+" (id int primary key");
@@ -49,6 +62,14 @@ public class Database {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    /**
+     * Insert a new row in the MySQL database.
+     * @param tableName the name of the table
+     * @param id the new row's id
+     * @param data a map with the value of each column
+     * @param foreignKeys foreign keys (witch are ints and need to be passed without apostrophes)
+     */
     @Audited private void _SQL_Insert(String tableName, int id, Map<String, String> data, Collection<String> foreignKeys) {
         try {
             StringBuilder sb = new StringBuilder("insert into "+tableName+" values ("+id);
@@ -64,6 +85,12 @@ public class Database {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    /**
+     * Delete a row from the MySQL database.
+     * @param tableName the name of the table
+     * @param id the row's id
+     */
     @Audited private void _SQL_Delete(String tableName, int id) {
         try {
             connection.prepareStatement("delete from "+tableName+" where id="+id+";").execute();
@@ -72,6 +99,15 @@ public class Database {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    /**
+     * Update a row from the MySQL database.
+     * @param tableName the name of the table
+     * @param id the row's id
+     * @param column the name of the column
+     * @param newValue the new value of the cell
+     * @param isFK whether the column is a foreign key or not
+     */
     @Audited private void _SQL_Update(String tableName, int id, String column, String newValue, boolean isFK) {
         try {
             if(isFK)
@@ -83,6 +119,13 @@ public class Database {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    /**
+     * Create a new table given a class extending Row.
+     * @param cls the class associated with the table
+     * @param withSql weather the table should be inserted in the MySQL database or not (used for loading tables)
+     * @implSpec The class must have a constructor annotated with "@TableObject" witch takes an int as the first argument and the rest as strings and optional columns as pairs of setters("@Setter") and getters(@Getter)
+     */
     @Audited private void _addTable(Class<? extends Row> cls, boolean withSql) {
         if(tables.containsKey(cls))
             throw new RuntimeException("Class "+cls.getSimpleName()+" already has a table declared");
@@ -135,6 +178,13 @@ public class Database {
         tables.put(cls, new Table(tableName, tableConstructor, tableGetters, tableSetters, tableDependencies));
         Audit.entry("Table "+tables.get(cls).name+" created", AuditLevel.CREATE_TABLE);
     }
+
+    /**
+     * Recursively get all information related to the current object in all tables (based on foreign keys)
+     * @param obj the object
+     * @return a map with all relate columns (the name of the class for ids and )
+     * @implNote as new tables cannot be added before all dependencies exist in the database no circular dependencies can occur so this method won't enter an infinite loop
+     */
     private Map<String, String> getColumns(Row obj) throws InvocationTargetException, IllegalAccessException {
         Map<String, String> columns = new HashMap<>();
         columns.put(obj.getClass().getSimpleName(), String.valueOf(obj.id));
@@ -146,7 +196,8 @@ public class Database {
             columns.putAll(getColumns(tables.get(dependency).rows.get(Integer.parseInt((String) tables.get(obj.getClass()).getters.get(tables.get(obj.getClass()).dependencies.get(dependency)).invoke(obj)))));
         return columns;
     }
-    protected Map<Integer, List<Row>> _join(Class<? extends Row> strong, Class<? extends Row> weak) {
+
+    @Deprecated protected Map<Integer, List<Row>> _join(Class<? extends Row> strong, Class<? extends Row> weak) {
         try {
             return new HashMap<>(){{
                 for(Row row1: tables.get(strong).rows.values()) {
@@ -163,6 +214,12 @@ public class Database {
             throw new RuntimeException("Class "+weak.getSimpleName()+" is not dependent on "+strong.getSimpleName());
         }
     }
+
+    /**
+     * Load a table from the MySQL database.
+     * @param cls the class associated with the table
+     * @param tableName the name of the table (overrides the name of the table annotated in the constructor)
+     */
     public void loadTable(Class<? extends Row> cls, String tableName) {
         try {
             ResultSet resultSet = connection.prepareStatement("select * from "+tableName+" order by id;").executeQuery();
@@ -186,7 +243,16 @@ public class Database {
             System.err.println(e.getMessage());
         }
     }
+
+    /**
+     * Describe a table.
+     * @param cls the class associated with the table
+     */
     public void describeTable(Class<?> cls) { tables.get(cls).describe(); }
+
+    /**
+     * Describe all tables in the database.
+     */
     public void describeTables() {
         System.out.println("Database table descriptions:\n");
         for(Class<?> table: tables.keySet()) {
@@ -194,7 +260,16 @@ public class Database {
             System.out.println();
         }
     }
+
+    /**
+     * Show a table.
+     * @param cls the class associated with the table
+     */
     public void showTable(Class<?> cls) { tables.get(cls).show(); }
+
+    /**
+     * Show all tables in the database.
+     */
     public void showTables() {
         System.out.println("Database table rows:\n");
         for(Class<?> table: tables.keySet()) {
@@ -202,6 +277,11 @@ public class Database {
             showTable(table);
         }
     }
+
+    /**
+     * Add a table to the database (wrapper for _addTable).
+     * @param cls the class associated with the table
+     */
     public void addTable(Class<? extends Row> cls) {
         try {
             _addTable(cls, true);
@@ -209,6 +289,11 @@ public class Database {
             System.err.println(e.getMessage());
         }
     }
+
+    /**
+     * Drop a table from the database (including MySQL).
+     * @param cls the class associated with the table
+     */
     @Audited public void dropTable(Class<?> cls) {
         if(tables.get(cls).isDependency.size() > 0)
             System.err.println("Class "+cls.getSimpleName()+" is dependency for other tables "+tables.get(cls).isDependency);
@@ -223,6 +308,11 @@ public class Database {
                 System.err.println(e.getMessage());
             }
     }
+
+    /**
+     * Drop all tables from the database (including MySQL).
+     * @implNote the auxiliary set is used to avoid concurrency errors as the same set would be iterated over at the same time as deleting items from it
+     */
     public void dropTables() {
         while (tables.size() > 0) {
             Set<Class<?>> nonConcurrent = new HashSet<>(tables.keySet());
@@ -231,6 +321,14 @@ public class Database {
                     dropTable(cls);
         }
     }
+
+    /**
+     * Insert a new row in the database (including MySQL).
+     * @param obj the object from witch the information should be extracted
+     * @param <T> the type of the object
+     * @return the new row's id
+     * @implNote the new id is returned in order for population scripts to be independent on previous data in the MySQL database
+     */
     public <T extends Row> int insert(T obj) {
         try {
             if(!tables.containsKey(obj.getClass()))
@@ -253,11 +351,25 @@ public class Database {
             return -1;
         }
     }
+
+    /**
+     * Get a copy of an object from the database.
+     * @param cls the class of the object
+     * @param id the id of the object
+     * @return the copy of the object
+     */
     public Row select(Class<?> cls, int id) {
         if(!tables.containsKey(cls))
             throw new RuntimeException("Class "+cls.getSimpleName()+" doesn't have a table associated");
         return _copy(tables.get(cls).selectID(id));
     }
+
+    /**
+     * Get the ids of the rows in a table that satisfy a set of conditions.
+     * @param cls the class associated with the table
+     * @param filters a map of columns and conditions
+     * @return a set if ids
+     */
     public Set<Integer> filteredIDs(Class<?> cls, Map<String, Predicate<Object>> filters) {
         if(!tables.containsKey(cls))
             throw new RuntimeException("Class "+cls.getSimpleName()+" doesn't have a table associated");
@@ -268,6 +380,13 @@ public class Database {
             return null;
         }
     }
+
+    /**
+     * Select the objects that satisfy a set of conditions from a specific table.
+     * @param cls the class associated with the table
+     * @param filters a map of columns and conditions
+     * @return a set of objects derived from Row
+     */
     public Set<Row> select(Class<?> cls, Map<String, Predicate<Object>> filters) {
         if(!tables.containsKey(cls))
             throw new RuntimeException("Class "+cls.getSimpleName()+" doesn't have a table associated");
@@ -282,6 +401,12 @@ public class Database {
             return null;
         }
     }
+
+    /**
+     * Delete the row with a specific id from a table.
+     * @param cls the class associated with the table
+     * @param id the id of the row
+     */
     public void delete(Class<?> cls, int id) {
         if(!tables.containsKey(cls))
             throw new RuntimeException("Class "+cls.getSimpleName()+" doesn't have a table associated");
@@ -294,6 +419,14 @@ public class Database {
         _SQL_Delete(tables.get(cls).name, id);
         tables.get(cls).delete(id);
     }
+
+    /**
+     * Delete a row from the database.
+     * @param cls the class associated with the table
+     * @param id the row's id
+     * @param column the name of the column
+     * @param newValue the new value of the cell
+     */
     public void update(Class<?> cls, int id, String column, String newValue) {
         if(!tables.containsKey(cls))
             throw new RuntimeException("Class "+cls.getSimpleName()+" doesn't have a table associated");
@@ -316,6 +449,12 @@ public class Database {
             System.err.println(e.getMessage());
         }
     }
+
+    /**
+     * Get all available information on a table (the columns of the table plus the ones of the strong dependencies) 
+     * @param cls the class associated with the table
+     * @return a set with columns and values
+     */
     public Set<Map<String, String>> allInfo(Class<?> cls) {
         if (!tables.containsKey(cls))
             throw new RuntimeException("Class "+cls.getSimpleName()+" doesn't have a table associated");
