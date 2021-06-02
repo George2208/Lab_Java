@@ -370,7 +370,7 @@ public class Database {
      * @param filters a map of columns and conditions
      * @return a set if ids
      */
-    public Set<Integer> filteredIDs(Class<?> cls, Map<String, Predicate<Object>> filters) {
+    public SortedSet<Integer> filteredIDs(Class<?> cls, Map<String, Predicate<Object>> filters) {
         if(!tables.containsKey(cls))
             throw new RuntimeException("Class "+cls.getSimpleName()+" doesn't have a table associated");
         try {
@@ -387,14 +387,28 @@ public class Database {
      * @param filters a map of columns and conditions
      * @return a set of objects derived from Row
      */
-    public Set<Row> select(Class<?> cls, Map<String, Predicate<Object>> filters) {
+    public SortedSet<Row> select(Class<?> cls, Map<String, Predicate<Object>> filters) {
         if(!tables.containsKey(cls))
             throw new RuntimeException("Class "+cls.getSimpleName()+" doesn't have a table associated");
         try {
-            Set<Row> set = new HashSet<>();
+            SortedSet<Row> set = new TreeSet<>(Comparator.comparingInt(o -> o.id));
             Table table = tables.get(cls);
             for(int id: table.filteredIDs(filters))
                 set.add(table.rows.get(id));
+            return set;
+        } catch (RuntimeException e) {
+            System.err.println(e.getMessage());
+            return null;
+        }
+    }
+
+    public SortedSet<Row> select(Class<?> cls) {
+        if(!tables.containsKey(cls))
+            throw new RuntimeException("Class "+cls.getSimpleName()+" doesn't have a table associated");
+        try {
+            SortedSet<Row> set = new TreeSet<>(Comparator.comparingInt(o -> o.id));
+            for(Row row: tables.get(cls).rows.values())
+                set.add(_copy(row));
             return set;
         } catch (RuntimeException e) {
             System.err.println(e.getMessage());
@@ -451,7 +465,7 @@ public class Database {
     }
 
     /**
-     * Get all available information on a table (the columns of the table plus the ones of the strong dependencies) 
+     * Get all available information on a table (the columns of the table plus the ones of the strong dependencies)
      * @param cls the class associated with the table
      * @return a set with columns and values
      */

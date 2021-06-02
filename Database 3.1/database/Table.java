@@ -10,7 +10,7 @@ public class Table {
     public int nextID = 1;
     public final String name;
     public final Constructor<?> constructor;
-    public final Map<Integer, Row> rows;
+    public final SortedMap<Integer, Row> rows;
     public final SortedMap<String, Method> getters;
     public final Map<String, Method> setters;
     public final Map<Class<? extends Row>, String> dependencies;
@@ -34,7 +34,7 @@ public class Table {
         getters = tableGetters;
         setters = tableSetters;
         dependencies = tableDependencies;
-        rows = new HashMap<>();
+        rows = new TreeMap<>();
         isDependency = new HashSet<>();
     }
     public Map<Class<?>, Integer> getDependencyIDs(Row obj) {
@@ -98,9 +98,9 @@ public class Table {
             return null;
         return rows.get(id);
     }
-    public Set<Integer> filteredIDs(Map<String, Predicate<Object>> filters) throws RuntimeException {
+    public SortedSet<Integer> filteredIDs(Map<String, Predicate<Object>> filters) throws RuntimeException {
         try {
-            Set<Integer> ids = new HashSet<>(rows.keySet());
+            SortedSet<Integer> ids = new TreeSet<>(rows.keySet());
             for(String column: filters.keySet())
                 for(int id: rows.keySet())
                     try {
